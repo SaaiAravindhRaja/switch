@@ -1,0 +1,43 @@
+slug: monday
+name: Monday.com
+category: Project management
+description: Work with monday.com boards and items, as you.
+enabled: true
+adapter: oauth
+auth:
+  type: oauth
+  refresh: rotating
+  oauth:
+    # monday.com's MCP server advertises a registration endpoint, so Core
+    # registers its own client and discovers the endpoints from the server.
+    # A new client may need the account admin's approval before it connects.
+    registration: dynamic
+    redirect: [loopback, core]
+    revocation_discovered: true
+  # monday.com's API is GraphQL only: the current user is read with a POST
+  # { me { id email } } to https://api.monday.com/v2. NOTE: the current OAuth
+  # identity call is a GET, so this needs confirming with maintainers (a small
+  # adapter change, or a GET userinfo endpoint) before it names the account
+  # live. The URL is given for completeness.
+  identity:
+    url: https://api.monday.com/v2
+    account_id: data.me.id
+    label: data.me.email
+token: { kind: pass_through, max_lifetime: 3600 }
+mcp:
+  servers:
+    - name: monday
+      url: "https://mcp.monday.com/mcp"
+access:
+  # monday.com's OAuth scopes: me:read and boards:read for reading, boards:write
+  # for changes.
+  read:
+    scopes:
+      - me:read
+      - boards:read
+  write:
+    scopes:
+      - me:read
+      - boards:read
+      - boards:write
+tools: { mode: pass_through }
