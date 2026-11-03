@@ -30,12 +30,14 @@ def test_shipped_catalog_enables_github_airtable_atlassian_datadog_and_google_wo
         "github",
         "airtable",
         "atlassian",
+        "clickup",
         "datadog",
         "google-workspace",
     }
     assert [slug for slug, entry in CATALOG.items() if entry.definition.enabled] == [
         "airtable",
         "atlassian",
+        "clickup",
         "datadog",
         "github",
         "google-workspace",
@@ -44,6 +46,7 @@ def test_shipped_catalog_enables_github_airtable_atlassian_datadog_and_google_wo
     assert "SKILL.md" in CATALOG["github"].skill_files
     assert "SKILL.md" in CATALOG["airtable"].skill_files
     assert "SKILL.md" in CATALOG["atlassian"].skill_files
+    assert "SKILL.md" in CATALOG["clickup"].skill_files
     assert "SKILL.md" in CATALOG["google-workspace"].skill_files
 
 
@@ -173,6 +176,24 @@ def test_the_shipped_atlassian_entry_signs_in_as_the_spike_found_it_must():
     assert not any(":rovo:" in scope or ":twg" in scope for scope in every)
     assert definition.auth.identity is not None
     assert definition.auth.identity.url == "https://api.atlassian.com/me"
+
+
+def test_the_shipped_clickup_entry_signs_in_through_its_mcp_server():
+    definition = CATALOG["clickup"].definition
+    oauth = definition.auth.oauth
+    assert oauth is not None
+    assert (definition.adapter, oauth.registration) == ("oauth", "dynamic")
+    assert oauth.revocation_discovered is False
+    assert oauth.remove_access is not None
+    assert definition.mcp is not None
+    assert [(s.name, s.url) for s in definition.mcp.servers] == [
+        ("clickup", "https://mcp.clickup.com/mcp")
+    ]
+    assert definition.access is not None and definition.access.write is not None
+    assert definition.access.read.scopes == ["read"]
+    assert "write" in definition.access.write.scopes
+    assert definition.auth.identity is not None
+    assert definition.auth.identity.url == "https://api.clickup.com/api/v2/user"
 
 
 def test_the_shipped_airtable_entry_signs_in_as_the_spike_found_it_must():

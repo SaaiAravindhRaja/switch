@@ -1,0 +1,47 @@
+slug: clickup
+name: ClickUp
+category: Project management
+description: Work with ClickUp tasks, lists and docs, as you.
+enabled: true
+adapter: oauth
+auth:
+  type: oauth
+  # ClickUp's OAuth tokens are long-lived and its MCP metadata advertises no
+  # refresh_token grant, so there is nothing to rotate. NOTE: the current
+  # OAuth adapter expects a refresh token on the token response; confirm with
+  # maintainers whether ClickUp's no-refresh flow needs a small adapter change
+  # before this connects live.
+  refresh: reusable
+  oauth:
+    # ClickUp's MCP server advertises a registration endpoint and a public
+    # ("none") client, so Core registers its own client and discovers the
+    # endpoints from the server.
+    registration: dynamic
+    redirect: [loopback, core]
+    # ClickUp's MCP OAuth metadata names no revocation endpoint, so people
+    # remove the connection in ClickUp themselves.
+    revocation_discovered: false
+    remove_access: >-
+      To cut an agent's access, remove the authorized app in ClickUp under
+      Settings, Integrations, Apps; a token already handed out stays valid
+      until it expires.
+  # ClickUp's REST user endpoint names the connected account.
+  identity:
+    url: https://api.clickup.com/api/v2/user
+    account_id: user.id
+    label: user.email
+token: { kind: pass_through, max_lifetime: 3600 }
+mcp:
+  servers:
+    - name: clickup
+      url: "https://mcp.clickup.com/mcp"
+access:
+  # ClickUp's MCP OAuth exposes a read scope and a write scope.
+  read:
+    scopes:
+      - read
+  write:
+    scopes:
+      - read
+      - write
+tools: { mode: pass_through }
