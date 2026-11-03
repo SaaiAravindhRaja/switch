@@ -1,7 +1,44 @@
 slug: notion
 name: Notion
 category: Knowledge base
-description: Read and write Notion pages and databases.
-enabled: false
+description: Read and work with Notion pages and databases, as you.
+enabled: true
+adapter: oauth
 auth:
   type: oauth
+  # Notion's MCP OAuth metadata advertises the refresh_token grant; rotation
+  # was not measured, so assume it rotates until a live sign-in confirms.
+  refresh: rotating
+  oauth:
+    # Notion's hosted MCP server advertises a registration endpoint, so Core
+    # registers its own client and discovers the endpoints from the server.
+    registration: dynamic
+    redirect: [loopback, core]
+    revocation_discovered: true
+  # Notion's current-user endpoint names the connected account. NOTE: Notion's
+  # REST API requires a Notion-Version header, which the OAuth identity call
+  # does not send, and it is not confirmed that an mcp.notion.com-issued token
+  # is accepted against api.notion.com. Confirm with maintainers / a live
+  # sign-in before relying on this; the issue asks for a connect/grant/use
+  # video.
+  identity:
+    url: https://api.notion.com/v1/users/me
+    account_id: id
+    label: name
+token: { kind: pass_through, max_lifetime: 3600 }
+mcp:
+  servers:
+    # Notion's official hosted MCP server. Workspace owners can manage and
+    # revoke MCP connections in Notion.
+    - name: notion
+      url: "https://mcp.notion.com/mcp"
+access:
+  # Notion's MCP OAuth exposes a single coarse `default` scope with no
+  # read/write split; what the connection reaches is governed by the pages and
+  # databases the owner shares with it during Notion's authorization flow, not
+  # by scope strings. One level is offered (the coarse scope also covers
+  # writes); the skill tells the agent to confirm before changing content.
+  read:
+    scopes:
+      - default
+tools: { mode: pass_through }
