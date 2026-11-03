@@ -15,7 +15,6 @@ PLACEHOLDERS = {
     "gitlab",
     "bitbucket",
     "microsoft-365",
-    "new-relic",
     "notion",
     "linear",
     "salesforce",
@@ -32,6 +31,7 @@ def test_shipped_catalog_enables_github_airtable_atlassian_datadog_and_google_wo
         "atlassian",
         "datadog",
         "google-workspace",
+        "new-relic",
     }
     assert [slug for slug, entry in CATALOG.items() if entry.definition.enabled] == [
         "airtable",
@@ -39,12 +39,14 @@ def test_shipped_catalog_enables_github_airtable_atlassian_datadog_and_google_wo
         "datadog",
         "github",
         "google-workspace",
+        "new-relic",
     ]
     assert all(not CATALOG[slug].skill_files for slug in PLACEHOLDERS)
     assert "SKILL.md" in CATALOG["github"].skill_files
     assert "SKILL.md" in CATALOG["airtable"].skill_files
     assert "SKILL.md" in CATALOG["atlassian"].skill_files
     assert "SKILL.md" in CATALOG["google-workspace"].skill_files
+    assert "SKILL.md" in CATALOG["new-relic"].skill_files
 
 
 GOOGLE = "https://www.googleapis.com/auth/"
@@ -945,6 +947,33 @@ def test_the_shipped_datadog_entry_puts_both_keys_in_its_mcp_headers():
     assert definition.token is not None
     assert definition.token.max_lifetime is None
     assert definition.token.issued_to_agents is False
+
+
+def test_the_shipped_new_relic_entry_checks_the_key_through_nerdgraph():
+    definition = CATALOG["new-relic"].definition
+    assert definition.adapter == "api_key"
+    sign_in = definition.auth.api_key
+    assert sign_in is not None
+    assert [(f.name, f.secret) for f in sign_in.fields] == [
+        ("api_key", True),
+        ("site", False),
+    ]
+    assert sign_in.choice_names() == {"site"}
+    assert definition.mcp is not None
+    [server] = definition.mcp.servers
+    # One hosted MCP server for every region; the key goes in an api-key header.
+    assert server.url == "https://mcp.newrelic.com/mcp/"
+    assert server.headers == {"api-key": "{api_key}"}
+    # The key is checked against NerdGraph's current user with a POST.
+    assert sign_in.identity.method == "POST"
+    assert sign_in.identity.url == "https://{site}/graphql"
+    assert sign_in.identity.headers == {"API-Key": "{api_key}"}
+    assert (sign_in.identity.account_id, sign_in.identity.label) == (
+        "data.actor.user.id",
+        "data.actor.user.email",
+    )
+    assert definition.token is not None
+    assert definition.token.max_lifetime is None
 
 
 def test_loads_an_api_key_entry(catalog_copy):

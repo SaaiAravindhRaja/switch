@@ -1,7 +1,54 @@
 slug: new-relic
 name: New Relic
 category: Observability
-description: Query New Relic telemetry and alerts.
-enabled: false
+description: Query New Relic telemetry, entities and alerts, with your key.
+enabled: true
+adapter: api_key
 auth:
   type: api_key
+  refresh: none
+  api_key:
+    fields:
+      - name: api_key
+        label: User API key
+        secret: true
+        help: >-
+          API keys, add a User key. Use a user in a read-only role where you
+          can. An org admin must switch New Relic MCP on in Feature Control
+          Manager.
+      - name: site
+        label: Data center
+        secret: false
+        help: The region your New Relic account is in.
+        choices:
+          - api.newrelic.com
+          - api.eu.newrelic.com
+          - api.jp.newrelic.com
+    # Checks the user key against NerdGraph, naming the current user, which a
+    # user key can read. New Relic's NerdGraph is one GraphQL endpoint per
+    # region; the hosted MCP server is a single URL.
+    identity:
+      method: POST
+      url: "https://{site}/graphql"
+      headers:
+        API-Key: "{api_key}"
+      body:
+        query: "{ actor { user { id email } } }"
+      account_id: data.actor.user.id
+      label: data.actor.user.email
+    help_url: https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/
+# A key does not expire, and only New Relic can revoke it, so it is never
+# handed to an agent: whatever runs beside the agent could keep it for good.
+token: { kind: pass_through, max_lifetime: null }
+mcp:
+  servers:
+    # New Relic's hosted MCP server takes a user key in an api-key header.
+    # New Relic's current setup docs steer new clients to OAuth and note the
+    # api-key method is limited; a key is used here because the catalog's OAuth
+    # flow needs a GET userinfo endpoint, which New Relic's OAuth does not
+    # offer. Revisit as OAuth if New Relic adds one.
+    - name: new-relic
+      url: "https://mcp.newrelic.com/mcp/"
+      headers:
+        api-key: "{api_key}"
+tools: { mode: pass_through }
