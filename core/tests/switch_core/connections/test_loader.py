@@ -32,6 +32,7 @@ def test_shipped_catalog_enables_github_airtable_atlassian_datadog_and_google_wo
         "atlassian",
         "datadog",
         "google-workspace",
+        "trello",
     }
     assert [slug for slug, entry in CATALOG.items() if entry.definition.enabled] == [
         "airtable",
@@ -39,12 +40,14 @@ def test_shipped_catalog_enables_github_airtable_atlassian_datadog_and_google_wo
         "datadog",
         "github",
         "google-workspace",
+        "trello",
     ]
     assert all(not CATALOG[slug].skill_files for slug in PLACEHOLDERS)
     assert "SKILL.md" in CATALOG["github"].skill_files
     assert "SKILL.md" in CATALOG["airtable"].skill_files
     assert "SKILL.md" in CATALOG["atlassian"].skill_files
     assert "SKILL.md" in CATALOG["google-workspace"].skill_files
+    assert "SKILL.md" in CATALOG["trello"].skill_files
 
 
 GOOGLE = "https://www.googleapis.com/auth/"
@@ -173,6 +176,29 @@ def test_the_shipped_atlassian_entry_signs_in_as_the_spike_found_it_must():
     assert not any(":rovo:" in scope or ":twg" in scope for scope in every)
     assert definition.auth.identity is not None
     assert definition.auth.identity.url == "https://api.atlassian.com/me"
+
+
+def test_the_shipped_trello_entry_uses_an_operators_client():
+    definition = CATALOG["trello"].definition
+    oauth = definition.auth.oauth
+    assert oauth is not None
+    # Trello documents no dynamic registration, so the operator registers one.
+    assert (definition.adapter, oauth.registration, oauth.client_settings) == (
+        "oauth",
+        "static",
+        "TRELLO",
+    )
+    assert oauth.revocation_discovered is False
+    assert oauth.remove_access is not None
+    assert definition.mcp is not None
+    assert [(s.name, s.url) for s in definition.mcp.servers] == [
+        ("trello", "https://mcp.trello.com/v1")
+    ]
+    assert definition.access is not None and definition.access.write is not None
+    assert definition.access.read.scopes == ["read"]
+    assert "write" in definition.access.write.scopes
+    assert definition.auth.identity is not None
+    assert definition.auth.identity.url == "https://api.trello.com/1/members/me"
 
 
 def test_the_shipped_airtable_entry_signs_in_as_the_spike_found_it_must():
